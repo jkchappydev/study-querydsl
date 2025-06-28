@@ -36,7 +36,6 @@ dependencies {
     // ✅ Openfeign QueryDsl
     def queryDslVersion = "6.11"
 
-    implementation("io.github.openfeign.querydsl:querydsl-core:${queryDslVersion}")
     implementation("io.github.openfeign.querydsl:querydsl-jpa:$queryDslVersion")
     annotationProcessor("io.github.openfeign.querydsl:querydsl-apt:$queryDslVersion:jpa")
     annotationProcessor "jakarta.annotation:jakarta.annotation-api"
