@@ -32,8 +32,51 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // ✅ Openfeign QueryDsl
+    def queryDslVersion = "6.11"
+
+    implementation("io.github.openfeign.querydsl:querydsl-core:${queryDslVersion}")
+    implementation("io.github.openfeign.querydsl:querydsl-jpa:$queryDslVersion")
+    annotationProcessor("io.github.openfeign.querydsl:querydsl-apt:$queryDslVersion:jpa")
+    annotationProcessor "jakarta.annotation:jakarta.annotation-api"
+    annotationProcessor "jakarta.persistence:jakarta.persistence-api"
+}
+
+
+// === ⭐ QueryDsl 빌드 옵션 (선택) ===
+// QueryDSL 생성 소스 파일 디렉터리 설정
+def querydslDir = layout.buildDirectory.dir("generated/querydsl").get().asFile
+
+// 메인 소스셋에 기존 Java 디렉터리와 QueryDSL 디렉터리 명시적으로 설정
+sourceSets {
+    main {
+        java {
+            srcDirs += ['src/main/java', querydslDir]
+        }
+    }
+}
+// Java 컴파일 시 QueryDSL 소스 생성 위치 설정
+tasks.withType(JavaCompile).configureEach {
+    options.getGeneratedSourceOutputDirectory().set(file(querydslDir))
+}
+
+// clean 작업 시 생성된 QueryDSL 디렉터리 삭제
+clean.doLast {
+    file(querydslDir).deleteDir()
+}
+
+// clean 작업 시 src/main/generated 디렉터리도 함께 삭제
+clean {
+    delete file('src/main/generated')
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.register("cleanAndCompileJava") {
+    group = "💡Custom"
+    description = "Cleans the build and compiles Java sources"
+    dependsOn "clean", "compileJava"
 }
