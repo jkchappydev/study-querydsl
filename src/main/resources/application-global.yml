@@ -1,0 +1,12 @@
+spring:
+  profiles:
+    group:
+      local:
+        - global
+        - local
+      dev:
+        - global
+        - dev
+      prd:
+        - global
+        - prd
