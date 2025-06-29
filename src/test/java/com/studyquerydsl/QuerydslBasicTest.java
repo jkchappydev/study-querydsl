@@ -7,7 +7,9 @@ import com.studyquerydsl.entity.QMember;
 import com.studyquerydsl.entity.QTeam;
 import com.studyquerydsl.entity.Team;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.PersistenceUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -514,6 +516,35 @@ public class QuerydslBasicTest {
         // .on(member.username.eq(team.name)) 이면
         // tuple = [Member(id=5, username=teamA, age=0), Team(id=1, name=teamA)]
         // tuple = [Member(id=6, username=teamB, age=0), Team(id=2, name=teamB)]
+    }
+
+    // ==== 패치 조인 ====
+    @PersistenceUnit
+    EntityManagerFactory emf;
+
+    @Test
+    public void fetchJoinNo() {
+        Member findMember = queryFactory
+                .selectFrom(QMember.member)
+                .where(QMember.member.username.eq("member1"))
+                .fetchOne();
+
+        // JPA가 특정 연관 객체를 '실제로 로딩했는지' 확인
+        // 즉, findMember.getTeam()을 실행했을 때, Team 프록시 객체를 실제 Team 엔티티로 초기화했는지 확인
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+        Assertions.assertThat(loaded).as("패치 조인 미적용").isFalse(); // false
+    }
+
+    @Test
+    public void fetchJoinUse() {
+        Member findMember = queryFactory
+                .selectFrom(QMember.member)
+                .join(member.team, team).fetchJoin() // 패치 조인 적용
+                .where(QMember.member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+        Assertions.assertThat(loaded).as("패치 조인 적용").isTrue(); // true
     }
 
 }
