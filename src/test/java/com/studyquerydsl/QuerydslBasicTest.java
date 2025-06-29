@@ -85,4 +85,159 @@ public class QuerydslBasicTest {
         Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
     }
 
+    // ==== 검색 조건 쿼리 ====
+    @Test // eq(param) ===> '='
+    public void searchEq() {
+        Member findMember = queryFactory
+                .selectFrom(member) // select(member).from(member) 하나로 합침
+                .where(member.username.eq("member1") // username = 'member1'
+                        .and(member.age.eq(10))
+                )
+                .fetchOne();
+
+        Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
+    @Test // ne(param),  eq(param).not() ===> '!='
+    public void searchNotEq() {
+        Member findMember1 = queryFactory
+                .selectFrom(member)
+                .where(member.username.ne("member1") // username != 'member1'
+                        .and(member.age.eq(10))
+                )
+                .fetchOne();
+
+        Member findMember2 = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1").not() // username != 'member1'
+                        .and(member.age.eq(10))
+                )
+                .fetchOne();
+
+        Assertions.assertThat(findMember1).isNull();
+        Assertions.assertThat(findMember2).isNull();
+    }
+
+    @Test // isNotNull()
+    public void searchIsNotNull() {
+        List<Member> findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.isNotNull())
+                .fetch();
+
+        Assertions.assertThat(findMember).isNotNull();
+    }
+
+    @Test // in(param1, param2, ...)
+    public void searchIn() {
+        List<Member> findMember = queryFactory
+                .selectFrom(member)
+                .where(member.age.in(10, 30)) // age in(10, 30)
+                .fetch();
+
+        Assertions.assertThat(findMember.get(0).getUsername()).isEqualTo("member1");
+    }
+
+    @Test // notIn(param1, param2, ...)
+    public void searchNotIn() {
+        List<Member> findMember = queryFactory
+                .selectFrom(member)
+                .where(member.age.notIn(10, 20, 30)) // age not in(10, 20, 30)
+                .fetch();
+
+        Assertions.assertThat(findMember.get(0).getUsername()).isEqualTo("member4");
+    }
+
+    @Test // between(param1, param2)
+    public void searchBetween() {
+        List<Member> findMember = queryFactory
+                .selectFrom(member)
+                .where(member.age.between(20, 30)) // age between 20 and 30
+                .fetch();
+
+        Assertions.assertThat(findMember.get(0).getUsername()).isEqualTo("member2");
+    }
+
+    @Test // goe(param) ===> '>='
+    public void searchGreaterOrEqual() {
+        List<Member> findMember = queryFactory
+                .selectFrom(member)
+                .where(member.age.goe(30)) // age >= 30
+                .fetch();
+
+        Assertions.assertThat(findMember.get(0).getUsername()).isEqualTo("member3");
+    }
+
+    @Test // gt(param) ===> '>'
+    public void searchGreaterThan() {
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.age.gt(30)) // age > 30
+                .fetchOne();
+
+        Assertions.assertThat(findMember.getUsername()).isEqualTo("member4");
+    }
+
+    @Test // loe(param) ===> '<='
+    public void searchLessOrEqual() {
+        List<Member> findMember = queryFactory
+                .selectFrom(member)
+                .where(member.age.loe(30)) // age <= 30
+                .fetch();
+
+        Assertions.assertThat(findMember.get(0).getUsername()).isEqualTo("member1");
+    }
+
+    @Test // lt(param) ===> '<'
+    public void searchLessThan() {
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.age.lt(20)) // age < 20
+                .fetchOne();
+
+        Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
+    @Test // like(param)
+    public void searchLike() {
+        List<Member> findMembers = queryFactory
+                .selectFrom(member)
+                .where(member.username.like("member%")) // username like 'member%'1 escape '!'
+                .fetch();
+
+        Assertions.assertThat(findMembers).hasSize(4);
+    }
+
+    @Test // contains()
+    public void searchContains() {
+        List<Member> findMembers = queryFactory
+                .selectFrom(member)
+                .where(member.username.contains("member")) // username like '%member%'1 escape '!'
+                .fetch();
+
+        Assertions.assertThat(findMembers).hasSize(4);
+    }
+
+    @Test
+    public void searchStartsWith() {
+        List<Member> findMembers = queryFactory
+                .selectFrom(member)
+                .where(member.username.startsWith("member")) // username like '%member'1 escape '!'
+                .fetch();
+
+        Assertions.assertThat(findMembers).hasSize(4);
+    }
+
+    @Test
+    public void searchAndParam() {
+        Member findMember = queryFactory
+                .selectFrom(member) // select(member).from(member) 하나로 합침
+                .where(member.username.eq("member1"),
+                        member.age.eq(10) // .and(member.age.eq(10))는 ,로 연결할 수도 있다.
+                )
+                .fetchOne();
+
+        Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
 }
