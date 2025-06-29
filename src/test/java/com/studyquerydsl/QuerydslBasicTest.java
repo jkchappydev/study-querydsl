@@ -288,4 +288,28 @@ public class QuerydslBasicTest {
         System.out.println("첫 페이지 데이터: " + resultPage.getContent());
     }
 
+    // ==== 정렬 ====
+    @Test
+    public void sort() {
+        // 1. 나이 내림차순
+        // 2. 회원 이름 오름차순
+        // 3. 회원 이름이 null은 마지막에 출력 -> nullsLast() (반대는 nullsFirst())
+        em.persist(new Member(null, 100));
+        em.persist(new Member("member5", 100));
+        em.persist(new Member("member6", 100));
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .where(member.age.eq(100))
+                .orderBy(member.age.desc(), member.username.asc().nullsLast())
+                .fetch();
+
+        Member member5 = result.get(0);
+        Member member6 = result.get(1);
+        Member memberNull = result.get(2);
+        Assertions.assertThat(member5.getUsername()).isEqualTo("member5");
+        Assertions.assertThat(member6.getUsername()).isEqualTo("member6");
+        Assertions.assertThat(memberNull.getUsername()).isNull();
+    }
+
 }
