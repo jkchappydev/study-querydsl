@@ -10,6 +10,10 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -218,7 +222,7 @@ public class QuerydslBasicTest {
         Assertions.assertThat(findMembers).hasSize(4);
     }
 
-    @Test
+    @Test // startsWith()
     public void searchStartsWith() {
         List<Member> findMembers = queryFactory
                 .selectFrom(member)
@@ -238,6 +242,50 @@ public class QuerydslBasicTest {
                 .fetchOne();
 
         Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
+    // ==== 결과 조회 ====
+    @Test
+    public void resultFetch() {
+        List<Member> fetch = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        Member fetchOne = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        Member fetchFirst = queryFactory
+                .selectFrom(member)
+                .fetchFirst();// .limit(1).fetchOne();
+
+        // fetchResult 는 페이징 + 카운트 쿼리인데 deprecated됨. ('fetchResults()' is deprecated)
+        // 따라서, 직접 페이징 조건 추가 및 따로 count 쿼리를 구성해야 한다.
+        int page = 0;     // 현재 페이지 (0부터 시작)
+        int size = 10;    // 페이지당 항목 수
+
+        // 페이징 쿼리
+        List<Member> content = queryFactory
+                .selectFrom(member)
+                .offset(page * size)
+                .limit(size)
+                .fetch();
+
+        // 전체 개수 // fetchCount는 카운트 쿼리인데 deprecated됨. ('fetchCount()' is deprecated)
+        // 따라서, 직접 count 쿼리를 구성해야 한다.
+        // 카운트 쿼리
+        Long total = queryFactory
+                .select(member.count())
+                .from(member)
+                .fetchOne();
+
+        // Page 객체로 wrapping
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Member> resultPage = new PageImpl<>(content, pageable, total);
+
+        System.out.println("전체 개수: " + resultPage.getTotalElements());
+        System.out.println("첫 페이지 데이터: " + resultPage.getContent());
     }
 
 }
