@@ -1,8 +1,10 @@
 package com.studyquerydsl;
 
+import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.studyquerydsl.entity.Member;
 import com.studyquerydsl.entity.QMember;
+import com.studyquerydsl.entity.QTeam;
 import com.studyquerydsl.entity.Team;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 import static com.studyquerydsl.entity.QMember.*;
+import static com.studyquerydsl.entity.QTeam.*;
 
 @SpringBootTest
 @Transactional
@@ -352,6 +355,49 @@ public class QuerydslBasicTest {
         Assertions.assertThat(result).hasSize(2);
         Assertions.assertThat(resultPage.getTotalElements()).isEqualTo(4);
         Assertions.assertThat(resultPage.getContent()).hasSize(2);
+    }
+
+    // ==== 집합 ====
+    @Test
+    public void aggregation() {
+        // QueryDSL에서 .select()에 여러 필드를 넣으면, 반환 타입은 Tuple로 받아야 한다.
+        // 실무에서는 DTO로 가져온다.
+        List<Tuple> result = queryFactory
+                .select(
+                        member.count(),
+                        member.age.sumAggregate(),
+                        member.age.avg(),
+                        member.age.max(),
+                        member.age.min()
+                )
+                .from(member)
+                .fetch();
+
+        Tuple tuple = result.get(0);
+        Assertions.assertThat(tuple.get(member.count())).isEqualTo(4);
+        Assertions.assertThat(tuple.get(member.age.sumAggregate())).isEqualTo(100);
+        Assertions.assertThat(tuple.get(member.age.avg())).isEqualTo(25);
+        Assertions.assertThat(tuple.get(member.age.max())).isEqualTo(40);
+        Assertions.assertThat(tuple.get(member.age.min())).isEqualTo(10);
+    }
+
+    @Test
+    public void groupBy() {
+        // 팀의 이름과, 각 팀의 평균 연령
+        List<Tuple> result = queryFactory
+                .select(
+                        team.name, // QTeam.team static import
+                        member.age.avg()
+                )
+                .from(member)
+                .join(member.team, team)
+                .groupBy(team.name)
+                .having(member.age.avg().goe(30)) // 평균 나이 30 이상만
+                .fetch();
+
+        Assertions.assertThat(result).hasSize(1);
+        Assertions.assertThat(result.get(0).get(team.name)).isEqualTo("teamB");
+        Assertions.assertThat(result.get(0).get(member.age.avg())).isEqualTo(35);
     }
 
 }
