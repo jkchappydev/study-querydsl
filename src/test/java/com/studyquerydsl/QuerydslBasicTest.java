@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static com.studyquerydsl.entity.QMember.*;
+
 @SpringBootTest
 @Transactional
 @ActiveProfiles(value = "local")
@@ -61,13 +63,25 @@ public class QuerydslBasicTest {
 
     @Test
     public void startQuerydsl() {
-        QMember m = new QMember("m"); // 어떤 QMember인지 구분하는 이름을 준다. (사용안함, 예시를 위한 코드)
-
+        // 1.
+        /*QMember m = new QMember("m"); // alias 변경
         Member findMember = queryFactory.select(m)
                 .from(m)
-                .where(m.username.eq("member1")) // 파라미터 바인딩 처리
-                .fetchOne();
+                .where(m.username.eq("member1"))
+                .fetchOne();*/
 
+        // 2.
+        /*QMember m = QMember.member;
+        Member findMember = queryFactory.select(m)
+                .from(m)
+                .where(m.username.eq("member1"))
+                .fetchOne();*/
+
+        // 3. QMember.member 를 option + enter로 static import (권장)
+        Member findMember = queryFactory.select(member)
+                .from(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
         Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
     }
 
