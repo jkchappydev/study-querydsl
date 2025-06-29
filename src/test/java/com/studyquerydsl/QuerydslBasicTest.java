@@ -268,6 +268,7 @@ public class QuerydslBasicTest {
         // 페이징 쿼리
         List<Member> content = queryFactory
                 .selectFrom(member)
+                .orderBy(member.username.desc())
                 .offset(page * size)
                 .limit(size)
                 .fetch();
@@ -310,6 +311,47 @@ public class QuerydslBasicTest {
         Assertions.assertThat(member5.getUsername()).isEqualTo("member5");
         Assertions.assertThat(member6.getUsername()).isEqualTo("member6");
         Assertions.assertThat(memberNull.getUsername()).isNull();
+    }
+
+    // ==== 페이징 ====
+    @Test
+    public void paging1() {
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.asc())
+                .offset(1) // 1개를 건너 뜀
+                .limit(2) // 최대 2개 조회
+                .fetch();
+
+        // member1 = Member(id=2, username=member2, age=20)
+        // member1 = Member(id=3, username=member3, age=30)
+        for (Member member1 : result) {
+            System.out.println("member1 = " + member1);
+        }
+
+        Assertions.assertThat(result).hasSize(2);
+    }
+
+    @Test
+    public void paging2() {
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.asc())
+                .offset(1) // 1개를 건너 뜀
+                .limit(2) // 최대 2개 조회
+                .fetch();
+
+        Long total = queryFactory
+                .select(member.count())
+                .from(member)
+                .fetchOne();
+
+        Pageable pageable = PageRequest.of(0, 2);
+        Page<Member> resultPage = new PageImpl<>(result, pageable, total);
+
+        Assertions.assertThat(result).hasSize(2);
+        Assertions.assertThat(resultPage.getTotalElements()).isEqualTo(4);
+        Assertions.assertThat(resultPage.getContent()).hasSize(2);
     }
 
 }
