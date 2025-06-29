@@ -400,6 +400,7 @@ public class QuerydslBasicTest {
         Assertions.assertThat(result.get(0).get(member.age.avg())).isEqualTo(35);
     }
 
+    // ==== 조인 ====
     @Test
     public void join() {
         // teamA에 소속된 모든 회원
@@ -441,6 +442,78 @@ public class QuerydslBasicTest {
                 .extracting("username")
                 .containsExactly("teamA", "teamB");
 
+    }
+
+    @Test
+    public void joinOnFiltering() {
+        // 회원과 팀을 조인하면서 팀 이름이 teamA 팀만 조인, 회원은 모두 조회
+        // JPQL : select m, t from Member m left join m.team t on t.name = 'teamA'
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team)
+                .on(team.name.eq("teamA"))
+                .fetch();
+
+        // tuple = [Member(id=1, username=member1, age=10), Team(id=1, name=teamA)]
+        // tuple = [Member(id=2, username=member2, age=20), Team(id=1, name=teamA)]
+        // tuple = [Member(id=3, username=member3, age=30), null]
+        // tuple = [Member(id=4, username=member4, age=40), null]
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+
+        // on 절을 활용해 조인 대상을 필터링 할 때, 외부조인이 아니라 내부조인(inner join)을 사용하면, where절에서 필터링 하는 것과 기능이 동일하다.
+        List<Tuple> result2 = queryFactory
+                .select(member, team)
+                .from(member)
+                .join(member.team, team)
+                .on(team.name.eq("teamA"))
+                // .where(team.name.eq("teamA")) // 같다.
+                .fetch();
+
+    }
+
+    @Test
+    public void joinOnNoRelation() {
+        // 연관관계 없는 엔티티 외부 조인
+        // 회원의 이름이 팀 이름과 같은 회원 조회 (* 회원 이름과 팀 이름은 연관관계가 없음)
+        // 세타 조인은 left join이 안되는데 이렇게 하면 된다.
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                // .leftJoin(member.team, team) -> 연관관계 기반 조인 (ON절 자동 생성됨: team_id = team.id)
+                // 내부적으로 member.team_id = team.id로 조인됨
+                // 보통은 .leftJoin(member.team, team) 으로 한다. 이렇게 하면 on절에 id가 들어간다. 그러면 조인하는 대상이 id로 매칭된다.
+                // 하지만, member.team을 제거하면 더이상 id로 매칭을 안하고, on절의 member.username.eq(team.name)으로 매칭된다.
+                /*
+                    SELECT m.*, t.*
+                    FROM member m
+                    LEFT JOIN team t
+                           ON m.username = t.name;*/
+                .leftJoin(team)
+                .on(member.username.eq(team.name))
+                .fetch();
+
+        // tuple = [Member(id=1, username=member1, age=10), null]
+        // tuple = [Member(id=2, username=member2, age=20), null]
+        // tuple = [Member(id=3, username=member3, age=30), null]
+        // tuple = [Member(id=4, username=member4, age=40), null]
+        // tuple = [Member(id=5, username=teamA, age=0), Team(id=1, name=teamA)]
+        // tuple = [Member(id=6, username=teamB, age=0), Team(id=2, name=teamB)]
+        // tuple = [Member(id=7, username=teamC, age=0), null]
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+
+        // .join(team)
+        // .on(member.username.eq(team.name)) 이면
+        // tuple = [Member(id=5, username=teamA, age=0), Team(id=1, name=teamA)]
+        // tuple = [Member(id=6, username=teamB, age=0), Team(id=2, name=teamB)]
     }
 
 }
