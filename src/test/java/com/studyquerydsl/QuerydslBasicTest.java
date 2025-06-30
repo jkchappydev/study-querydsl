@@ -3,6 +3,7 @@ package com.studyquerydsl;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.studyquerydsl.entity.Member;
@@ -672,6 +673,27 @@ public class QuerydslBasicTest {
         }
     }
 
+    @Test
+    public void orderByCase() {
+        // 1. 0 ~ 30살이 아닌 회원을 먼저 출력
+        // 2. 0 ~ 20살인 회원 출력
+        // 3. 20 ~ 30살인 회원 출력
+        NumberExpression<Integer> rankPath = new CaseBuilder()
+                .when(member.age.between(0, 20)).then(2)
+                .when(member.age.between(21, 30)).then(1)
+                .otherwise(3);
+
+        List<Tuple> result = queryFactory
+                .select(member.username, member.age, rankPath)
+                .from(member)
+                .orderBy(rankPath.desc())
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
     // ==== 상수, 문자 더하기 ====
     @Test
     public void constant() { // 상수
@@ -698,5 +720,5 @@ public class QuerydslBasicTest {
             System.out.println("s = " + s);
         }
     }
-    
+
 }
