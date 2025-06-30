@@ -8,6 +8,7 @@ import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.studyquerydsl.dto.MemberDto;
+import com.studyquerydsl.dto.QMemberDto;
 import com.studyquerydsl.dto.UserDto;
 import com.studyquerydsl.entity.Member;
 import com.studyquerydsl.entity.QMember;
@@ -850,6 +851,20 @@ public class QuerydslBasicTest {
         // userDto = UserDto(name=member4, age=40)
         for (UserDto userDto : result) {
             System.out.println("userDto = " + userDto);
+        }
+    }
+
+    // ==== 프로젝션과 결과 반환 - @QueryProjection ====
+    // MemberDto 특정 파라미터를 갖는 생성자를 명시적으로 만들고 그 위에 @QueryProjection을 붙이면, QueryDSL이 해당 생성자를 기반으로 Q타입을 생성
+    @Test
+    public void findDtoByQuerydslQueryProjection() {
+        List<MemberDto> result = queryFactory
+                .select(new QMemberDto(member.username, member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
         }
     }
 
