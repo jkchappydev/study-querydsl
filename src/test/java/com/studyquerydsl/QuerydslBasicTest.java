@@ -721,4 +721,32 @@ public class QuerydslBasicTest {
         }
     }
 
+    // ==== 프로젝션과 결과 반환 - 기본 ====
+    @Test
+    public void simpleProjection() {
+        List<Member> result = queryFactory // 객체 타입 또한 프로젝션 대상이 하나다.
+                .select(member)
+                .from(member)
+                .fetch();
+
+        for (Member member : result) {
+            System.out.println("member = " + member);
+        }
+    }
+
+    @Test
+    public void tupleProjection() {
+        List<Tuple> result = queryFactory
+                .select(member.username, member.age)
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : result) {
+            String username = tuple.get(member.username);
+            Integer age = tuple.get(member.age);
+            System.out.println("username = " + username);
+            System.out.println("age = " + age);
+        }
+    }
+
 }
