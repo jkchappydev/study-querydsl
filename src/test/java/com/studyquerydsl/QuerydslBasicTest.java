@@ -2,6 +2,7 @@ package com.studyquerydsl;
 
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.studyquerydsl.entity.Member;
@@ -671,4 +672,31 @@ public class QuerydslBasicTest {
         }
     }
 
+    // ==== 상수, 문자 더하기 ====
+    @Test
+    public void constant() { // 상수
+        List<Tuple> result = queryFactory
+                .select(member.username, Expressions.constant("A")) // 상수 A 출력 (JPQL에서는 미출력)
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    @Test
+    public void concat() { // 문자 더하기 (문자 + 문자는 .concat(xxx).concat(xxx) / 문자 + 숫자는 .concat(xxx).concat(xxx.stringValue()))
+        // {username}_{age}
+        List<String> result = queryFactory
+                .select(member.username.concat("_").concat(member.age.stringValue()))
+                .from(member)
+                .where(member.username.eq("member1"))
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+    
 }
