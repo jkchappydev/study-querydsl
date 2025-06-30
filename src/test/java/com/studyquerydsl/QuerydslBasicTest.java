@@ -1,14 +1,16 @@
 package com.studyquerydsl;
 
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.studyquerydsl.dto.MemberDto;
+import com.studyquerydsl.dto.UserDto;
 import com.studyquerydsl.entity.Member;
 import com.studyquerydsl.entity.QMember;
-import com.studyquerydsl.entity.QTeam;
 import com.studyquerydsl.entity.Team;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -27,9 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static com.querydsl.jpa.JPAExpressions.*;
-import static com.studyquerydsl.entity.QMember.*;
-import static com.studyquerydsl.entity.QTeam.*;
+import static com.querydsl.jpa.JPAExpressions.select;
+import static com.studyquerydsl.entity.QMember.member;
+import static com.studyquerydsl.entity.QTeam.team;
 
 @SpringBootTest
 @Transactional
@@ -746,6 +748,108 @@ public class QuerydslBasicTest {
             Integer age = tuple.get(member.age);
             System.out.println("username = " + username);
             System.out.println("age = " + age);
+        }
+    }
+
+    // ==== 프로젝션과 결과 반환 - DTO 조회 ====
+    @Test
+    public void findDtoByJPQL() { // 순수 JPA 방식 (new operation 사용)
+        List<MemberDto> result = em.createQuery("select new com.studyquerydsl.dto.MemberDto(m.username, m.age) from Member m", MemberDto.class)
+                .getResultList();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+
+    // 1. 프로퍼티 접근 (getter, setter 필요하다)
+    // 2. 필드 (getter, setter 불필요)
+    // 3. 생성자 접근
+    @Test
+    public void findDtoByQuerydslSetter() { // 1. 프로퍼티 접근 (setter)
+        // select()에 Projections.bean(반환할 클래스 타입, 반환할 필드1, 반환할 필드2, ...)
+        List<MemberDto> result = queryFactory
+                .select(Projections.bean(MemberDto.class, // 기본 생성자 필요하다.
+                        member.username,
+                        member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+
+    @Test
+    public void findDtoByQuerydslField() { // 2. 필드
+        // select()에 Projections.fields(반환할 클래스 타입, 반환할 필드1, 반환할 필드2, ...)
+        List<MemberDto> result = queryFactory
+                .select(Projections.fields(MemberDto.class,
+                        member.username, // 필드명이 정확히 일치해야 한다. (다를 경우 .as() 로 맞춰야 한다.)
+                        member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+
+    @Test
+    public void findDtoByQuerydslConstructor() { // 3. 생성자 접근
+        // select()에 Projections.constructor(반환할 클래스 타입, 반환할 필드1, 반환할 필드2, ...)
+        List<MemberDto> result = queryFactory
+                .select(Projections.constructor(MemberDto.class,
+                        member.username, // MemberDto와 Member 엔티티의 필드 타입들이 정확히 일치해야 한다. 해당 필드를 파라미터로 받는 생성자가 있어야 한다.
+                        member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+
+    @Test
+    public void findUserDtoByQuerydslField() {
+
+        List<UserDto> result = queryFactory
+                .select(Projections.fields(UserDto.class,
+                        member.username.as("name"), // UserDto는 username이 아닌 name, 따라서 as("name")으로 맞춰야한다.
+                        // ExpressionUtils.as(member.username, "name"), // ExpressionUtils.as(source, alias) 가능. 이때 별칭을 UserDto의 필드명과 일치하게 작성해야 한다.
+                        member.age))
+                .from(member)
+                .fetch();
+
+        // as("name") 사용 안했을 때는 매칭되지 않아서 실행은 되지만 null로 나온다.
+        // userDto = UserDto(name=null, age=10)
+        // userDto = UserDto(name=null, age=20)
+        // userDto = UserDto(name=null, age=30)
+        // userDto = UserDto(name=null, age=40)
+        for (UserDto userDto : result) {
+            System.out.println("userDto = " + userDto);
+        }
+    }
+
+    @Test
+    public void findUserDtoByQuerydslField2() {
+        QMember memberSub = new QMember("memberSub");
+
+        List<UserDto> result = queryFactory
+                .select(Projections.fields(UserDto.class,
+                        member.username.as("name"),
+                        ExpressionUtils.as(select(memberSub.age.max()) // 조회할때 나이를 그냥 최대값으로
+                                        .from(memberSub), "age") // select()절의 서브쿼리에 별칭을 붙힐 때 반드시 ExpressionUtils.as(source, alias) 사용. (.as()사용 불가능) 이때, 별칭을 UserDto의 필드명과 일치해야한다.
+                ))
+                .from(member)
+                .fetch();
+
+        // userDto = UserDto(name=member1, age=40)
+        // userDto = UserDto(name=member2, age=40)
+        // userDto = UserDto(name=member3, age=40)
+        // userDto = UserDto(name=member4, age=40)
+        for (UserDto userDto : result) {
+            System.out.println("userDto = " + userDto);
         }
     }
 
