@@ -5,6 +5,7 @@ import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
@@ -901,6 +902,66 @@ public class QuerydslBasicTest {
                 .where(builder)
                 // .where(builder.and(xxx).or(xxx)) // builder도 .and(), .or() 가능하다
                 .fetch();
+    }
+
+    // ==== 동적 쿼리 - Where 다중 파라미터 사용 ====
+    @Test
+    public void dynamicQueryWhereParam() {
+        String usernameParam = "member1";
+        Integer ageParam = null;
+
+        List<Member> result = searchMember2(usernameParam, ageParam);
+        Assertions.assertThat(result.size()).isEqualTo(1);
+    }
+
+    private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+        return queryFactory
+                .select(member)
+                .from(member)
+                // .where(usernameEq(usernameCond), ageEq(ageCond))
+                .where(allEq(usernameCond, ageCond))
+                .fetch();
+    }
+
+    // 동적 조건을 메서드로 분리해두면 다양한 쿼리에서 재활용 가능
+    private List<MemberDto> searchMember3(String usernameCond, Integer ageCond) {
+        return queryFactory
+                .select(new QMemberDto(member.username, member.age))
+                .from(member)
+                // .where(usernameEq(usernameCond), ageEq(ageCond))
+                .where(allEq(usernameCond, ageCond))
+                .fetch();
+    }
+
+    private BooleanExpression usernameEq(String usernameCond) {
+        return usernameCond != null ? member.username.eq(usernameCond) : null;
+    }
+
+    private BooleanExpression ageEq(Integer ageCond) {
+        return ageCond != null ? member.age.eq(ageCond) : null;
+    }
+
+    // 두 가지 모두 포함하는 동적조건을 생성할 수도 있다.
+    // 이때, Predicate 반환 타입이 아닌, BooleanExpression을 반환 타입으로 해야한다.
+    // Predicate와 BooleanExpression
+    // BooleanExpression은 Predicate의 구현체 클래스
+    // BooleanExpression은 .and(), .or()로 추가 조립이 가능하다. (Predicate는 불가능)
+    // 따라서, 단순 조건이면 Predicate 반환 타입을 사용해도 무방하나, 조건을 조합해야 하는 경우는 BooleanExpression을 반환 타입으로 해야한다.
+    private BooleanExpression allEq(String usernameCond, Integer ageCond) {
+        // return usernameEq(usernameCond).and(ageEq(ageCond)); // null 처리를 따로 해야한다. (usernameCond, ageCond 둘 다 없으면 NPE 발생)
+
+        BooleanExpression username = usernameEq(usernameCond);
+        BooleanExpression age = ageEq(ageCond);
+
+        if (username != null && age != null) {
+            return username.and(age);
+        } else if (username != null) {
+            return username;
+        } else if (age != null) {
+            return age;
+        } else {
+            return null; // 아무 조건도 없으면 null 반환 → where 절에서 무시됨
+        }
     }
 
 }
