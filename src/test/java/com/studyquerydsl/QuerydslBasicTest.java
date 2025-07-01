@@ -3,7 +3,6 @@ package com.studyquerydsl;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
-import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
@@ -40,6 +39,7 @@ import static com.studyquerydsl.entity.QTeam.team;
 @SpringBootTest
 @Transactional
 @ActiveProfiles(value = "local")
+// @Rollback(false)
 public class QuerydslBasicTest {
 
     @PersistenceContext
@@ -962,6 +962,59 @@ public class QuerydslBasicTest {
         } else {
             return null; // 아무 조건도 없으면 null 반환 → where 절에서 무시됨
         }
+    }
+    
+    // ==== 수정, 삭제 배치 쿼리 ====
+    @Test
+    // @Commit
+    public void bulkUpdate() {
+        // 나이가 28살 미만인 회원의 이름을 "비회원"으로 변경
+        // bulk 연산은 영속성 컨텍스트의 상태를 무시하고 바로 DB로 보낸다.
+        // 이러면 DB 상태와 영속성 컨텍스트의 상태가 달라져버리는 문제 발생.
+        long count = queryFactory
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(28))
+                .execute();
+
+        // bulk 연산 이후에는 무조건 영속성 컨텍스트 초기화
+        em.flush();
+        em.clear();
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        for (Member member1 : result) {
+            System.out.println("member1 = " + member1);
+        }
+    }
+
+    @Test
+    // @Commit
+    public void bulkAdd() { // 더하기
+        long count = queryFactory
+                .update(member)
+                .set(member.age, member.age.add(1)) // 뺄거면 add() 에 -1
+                .execute();
+    }
+
+    @Test
+    // @Commit
+    public void bulkMultiply() { // 곱하기
+        long count = queryFactory
+                .update(member)
+                .set(member.age, member.age.multiply(2))
+                .execute();
+    }
+
+    @Test
+    public void bulkDelete() {
+        // 나이가 18살 초과인 회원을 삭제
+        long count = queryFactory
+                .delete(member)
+                .where(member.age.gt(18))
+                .execute();
     }
 
 }
