@@ -15,10 +15,7 @@ import com.studyquerydsl.dto.UserDto;
 import com.studyquerydsl.entity.Member;
 import com.studyquerydsl.entity.QMember;
 import com.studyquerydsl.entity.Team;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.PersistenceUnit;
+import jakarta.persistence.*;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +24,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.annotation.Commit;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -1017,4 +1015,55 @@ public class QuerydslBasicTest {
                 .execute();
     }
 
+    // ==== SQL function 호출하기 ====
+    @Test
+    public void sqlFunctionReplace() {
+        /*
+            select replace(member0_.username, 'member', 'M')
+            from member member0_;
+        */
+        List<String> result = queryFactory
+                .select(
+                        Expressions.stringTemplate(
+                                "function('replace', {0}, {1}, {2})", member.username, "member", "M"
+                        )
+                ).from(member)
+                .fetch();
+
+        // s = M1
+        // s = M2
+        // s = M3
+        // s = M4
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
+    @Test
+    public void sqlFunctionLower() {
+        // username이 전부 소문자인 회원 조회
+        /*
+            select m.username
+            from member m
+            where m.username = lower(m.username);
+        */
+        List<String> result = queryFactory
+                .select(member.username)
+                .from(member)
+                .where(member.username.eq(
+                        // Expressions.stringTemplate("function('lower', {0})", member.username)
+                        // ANSI 표준 함수는 아래와 같이 사용 가능
+                        member.username.lower()
+                ))
+                .fetch();
+
+        // s = member1
+        // s = member2
+        // s = member3
+        // s = member4
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+    
 }
