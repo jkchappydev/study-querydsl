@@ -1,6 +1,9 @@
 package com.studyquerydsl.repository;
 
+import com.studyquerydsl.dto.MemberSearchCondition;
+import com.studyquerydsl.dto.MemberTeamDto;
 import com.studyquerydsl.entity.Member;
+import com.studyquerydsl.entity.Team;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.assertj.core.api.Assertions;
@@ -38,6 +41,32 @@ class MemberRepositoryTest {
 
         List<Member> findMemberAll = memberRepository.findAll();
         Assertions.assertThat(findMemberAll).containsExactly(member);
+    }
+
+    @Test
+    public void searchTest() {
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        em.persist(teamA);
+        em.persist(teamB);
+
+        Member member = new Member("member1", 10, teamA);
+        Member member2 = new Member("member2", 20, teamA);
+        Member member3 = new Member("member3", 30, teamB);
+        Member member4 = new Member("member4", 40, teamB);
+
+        em.persist(member);
+        em.persist(member2);
+        em.persist(member3);
+        em.persist(member4);
+
+        MemberSearchCondition condition = new MemberSearchCondition();
+        condition.setAgeGoe(35);
+        condition.setAgeLoe(40);
+        condition.setTeamName("teamB");
+
+        List<MemberTeamDto> result = memberRepository.search(condition);
+        Assertions.assertThat(result).extracting("username").containsExactly("member4");
     }
 
 }
