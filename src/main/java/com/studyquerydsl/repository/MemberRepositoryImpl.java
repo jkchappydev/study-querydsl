@@ -1,6 +1,7 @@
 package com.studyquerydsl.repository;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.studyquerydsl.dto.MemberSearchCondition;
 import com.studyquerydsl.dto.MemberTeamDto;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -68,7 +70,7 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
         // .fetchResults(); // 페이징 + 카운트 쿼리인데 deprecated됨. 따로 count 쿼리를 구성해야 함.
 
         // count 쿼리 최적화 가능
-        Long total = queryFactory
+        JPAQuery<Long> countQuery = queryFactory
                 .select(member.count())
                 .from(member)
                 //.leftJoin(member.team, team)
@@ -77,10 +79,13 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                         teamNameEq(condition.getTeamName()),
                         ageGoe(condition.getAgeGoe()),
                         ageLoe(condition.getAgeLoe())
-                )
-                .fetchOne();
+                );
 
-        return new PageImpl<>(content, pageable, Optional.ofNullable(total).orElse(0L));
+        // countQuery.fetchOne(); // 이거를
+
+        return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne); // 이렇게 넘김
+
+        // return new PageImpl<>(content, pageable, Optional.ofNullable(total).orElse(0L));
     }
 
     private BooleanExpression usernameEq(String username) {
