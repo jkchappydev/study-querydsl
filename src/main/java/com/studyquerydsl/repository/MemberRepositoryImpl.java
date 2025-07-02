@@ -19,7 +19,7 @@ import static com.studyquerydsl.entity.QTeam.team;
 
 // 2. 사용자 정의 인터페이스 구현
 @RequiredArgsConstructor
-public class MemberRepositoryImpl  implements MemberRepositoryCustom {
+public class MemberRepositoryImpl implements MemberRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
 
