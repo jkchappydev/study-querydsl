@@ -1,26 +1,23 @@
 package com.studyquerydsl.repository;
 
 import com.querydsl.core.BooleanBuilder;
-import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.studyquerydsl.dto.MemberSearchCondition;
 import com.studyquerydsl.dto.MemberTeamDto;
 import com.studyquerydsl.dto.QMemberTeamDto;
 import com.studyquerydsl.entity.Member;
-import com.studyquerydsl.entity.QTeam;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Optional;
 
 import static com.studyquerydsl.entity.QMember.member;
-import static com.studyquerydsl.entity.QTeam.*;
-import static org.springframework.util.StringUtils.*;
+import static com.studyquerydsl.entity.QTeam.team;
+import static org.springframework.util.StringUtils.hasText;
 
 @Repository
 @RequiredArgsConstructor
